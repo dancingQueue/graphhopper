@@ -956,6 +956,15 @@ public class GraphHopper implements GraphHopperAPI {
         return response;
     }
 
+    @Override
+    public GHMatrixResponse route(List<GHRequest> requests) {
+        GHMatrixResponse matrixResponse = new GHMatrixResponse();
+        for (GHRequest request : requests) {
+            matrixResponse.addResponse(route(request));
+        }
+        return matrixResponse;
+    }
+
     /**
      * This method calculates the alternative path list using the low level Path objects.
      */

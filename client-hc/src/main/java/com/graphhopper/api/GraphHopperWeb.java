@@ -20,10 +20,7 @@ package com.graphhopper.api;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.graphhopper.GHRequest;
-import com.graphhopper.GHResponse;
-import com.graphhopper.GraphHopperAPI;
-import com.graphhopper.PathWrapper;
+import com.graphhopper.*;
 import com.graphhopper.http.WebHelper;
 import com.graphhopper.jackson.Jackson;
 import com.graphhopper.util.*;
@@ -377,6 +374,15 @@ public class GraphHopperWeb implements GraphHopperAPI {
         } catch (Exception ex) {
             throw new RuntimeException("Problem while fetching path " + request.getPoints() + ": " + ex.getMessage(), ex);
         }
+    }
+
+    @Override
+    public GHMatrixResponse route(List<GHRequest> requests) {
+        GHMatrixResponse matrixResponse = new GHMatrixResponse();
+        for (GHRequest request : requests) {
+            matrixResponse.addResponse(route(request));
+        }
+        return matrixResponse;
     }
 
     private OkHttpClient getClientForRequest(GHRequest request) {

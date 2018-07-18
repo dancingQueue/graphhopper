@@ -17,6 +17,8 @@
  */
 package com.graphhopper;
 
+import java.util.List;
+
 /**
  * Wrapper of the graphhopper online or offline API. Provides read only access.
  * <p>
@@ -40,4 +42,6 @@ public interface GraphHopperAPI {
      * @return the response with the route and possible errors
      */
     GHResponse route(GHRequest request);
+
+    GHMatrixResponse route(List<GHRequest> requests);
 }

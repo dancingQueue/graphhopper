@@ -391,6 +391,15 @@ public final class GraphHopperGtfs implements GraphHopperAPI {
         return new RequestHandler(request).route();
     }
 
+    @Override
+    public GHMatrixResponse route(List<GHRequest> requests) {
+        GHMatrixResponse matrixResponse = new GHMatrixResponse();
+        for (GHRequest request : requests) {
+            matrixResponse.addResponse(route(request));
+        }
+        return matrixResponse;
+    }
+
     private class TransferWithTime {
         public String id;
         Transfer transfer;
