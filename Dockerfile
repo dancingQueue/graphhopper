@@ -18,4 +18,4 @@ EXPOSE 11111
 
 ENTRYPOINT [ "./graphhopper.sh", "web" ]
 
-CMD [ "/data/europe_germany_berlin.pbf" ]
+CMD [ "/data/volga-fed-district-latest.osm.pbf" ]
