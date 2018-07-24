@@ -166,27 +166,6 @@ public class WebHelper {
             jsonPath.put("weight", Helper.round6(ar.getRouteWeight()));
             jsonPath.put("time", ar.getTime());
             jsonPath.put("transfers", ar.getNumChanges());
-            if (!ar.getDescription().isEmpty()) {
-                jsonPath.putPOJO("description", ar.getDescription());
-            }
-            if (calcPoints) {
-                jsonPath.put("points_encoded", pointsEncoded);
-                if (ar.getPoints().getSize() >= 2) {
-                    jsonPath.putPOJO("bbox", ar.calcBBox2D());
-                }
-                jsonPath.putPOJO("points", pointsEncoded ? encodePolyline(ar.getPoints(), enableElevation) : ar.getPoints().toLineString(enableElevation));
-                if (enableInstructions) {
-                    jsonPath.putPOJO("instructions", ar.getInstructions());
-                }
-                jsonPath.putPOJO("legs", ar.getLegs());
-                jsonPath.putPOJO("details", ar.getPathDetails());
-                jsonPath.put("ascend", ar.getAscend());
-                jsonPath.put("descend", ar.getDescend());
-            }
-            jsonPath.putPOJO("snapped_waypoints", pointsEncoded ? encodePolyline(ar.getWaypoints(), enableElevation) : ar.getWaypoints().toLineString(enableElevation));
-            if (ar.getFare() != null) {
-                jsonPath.put("fare", NumberFormat.getCurrencyInstance(Locale.ROOT).format(ar.getFare()));
-            }
         }
         return json;
     }
