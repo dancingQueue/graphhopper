@@ -400,6 +400,11 @@ public final class GraphHopperGtfs implements GraphHopperAPI {
         return matrixResponse;
     }
 
+    @Override
+    public void calcPathsForMatrix(GHRequest request, List<GHPoint> sourcePoints, List<GHPoint> destinationPoints, LowLevelMatrixResponse matrixResponse, GHResponse ghRsp) {
+
+    }
+
     private class TransferWithTime {
         public String id;
         Transfer transfer;

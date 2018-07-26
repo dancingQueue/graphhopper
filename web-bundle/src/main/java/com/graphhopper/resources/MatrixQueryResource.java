@@ -106,29 +106,44 @@ public class MatrixQueryResource {
             throw new IllegalArgumentException("If you pass " + POINT_HINT + ", you need to pass a hint for every point, empty hints will be ignored");
 
 
-        int sourcePointsLength = sourceRequestPoints.size();
-        int destinationPointsLength = destinationRequestPoints.size();
-        List<GHRequest> requests = new ArrayList<>();
-        for (int i = 0; i < sourcePointsLength; i++) {
-            for (int j = 0; j < destinationPointsLength; j++) {
-                GHRequest request = new GHRequest(sourceRequestPoints.get(i), destinationRequestPoints.get(j));
-                initHints(request.getHints(), uriInfo.getQueryParameters());
-                request.setVehicle(vehicleStr).
-                        setWeighting(weighting).
-                        setAlgorithm(algoStr).
-                        setLocale(localeStr).
-                        setPointHints(pointHints).
-                        setPathDetails(pathDetails).
-                        getHints().
-                        put(CALC_POINTS, calcPoints).
-                        put(INSTRUCTIONS, instructions).
-                        put(WAY_POINT_MAX_DISTANCE, minPathPrecision);
+//        int sourcePointsLength = sourceRequestPoints.size();
+//        int destinationPointsLength = destinationRequestPoints.size();
+//        List<GHRequest> requests = new ArrayList<>();
+//        for (int i = 0; i < sourcePointsLength; i++) {
+//            for (int j = 0; j < destinationPointsLength; j++) {
+//                GHRequest request = new GHRequest(sourceRequestPoints.get(i), destinationRequestPoints.get(j));
+//                request.setVehicle(vehicleStr).
+//                        setWeighting(weighting).
+//                        setAlgorithm(algoStr).
+//                        setLocale(localeStr).
+//                        setPointHints(pointHints).
+//                        setPathDetails(pathDetails).
+//                        getHints().
+//                        put(CALC_POINTS, calcPoints).
+//                        put(INSTRUCTIONS, instructions).
+//                        put(WAY_POINT_MAX_DISTANCE, minPathPrecision);
+//
+//                requests.add(request);
+//            }
+//        }
 
-                requests.add(request);
-            }
-        }
+        GHRequest request = new GHRequest(sourceRequestPoints.get(0), destinationRequestPoints.get(0));
+        initHints(request.getHints(), uriInfo.getQueryParameters());
+        request.setVehicle(vehicleStr).
+                setWeighting(weighting).
+                setAlgorithm(algoStr).
+                setLocale(localeStr).
+                setPointHints(pointHints).
+                setPathDetails(pathDetails).
+                getHints().
+                put(CALC_POINTS, calcPoints).
+                put(INSTRUCTIONS, instructions).
+                put(WAY_POINT_MAX_DISTANCE, minPathPrecision);
 
-        GHMatrixResponse ghMatrixResponse = graphHopper.route(requests);
+
+        LowLevelMatrixResponse lowLevelMatrixResponse = new LowLevelMatrixResponse();
+        GHResponse ghResponse = new GHResponse();
+        graphHopper.calcPathsForMatrix(request, sourceRequestPoints, destinationRequestPoints, lowLevelMatrixResponse, ghResponse);
 
         // TODO: Request logging and timing should perhaps be done somewhere outside
         float took = sw.stop().getSeconds();
@@ -136,15 +151,11 @@ public class MatrixQueryResource {
         String logStr = httpReq.getQueryString() + " " + infoStr + " " + sourceRequestPoints + ", took:"
                 + took + ", " + algoStr + ", " + weighting + ", " + vehicleStr;
 
-        if (ghMatrixResponse.hasErrors()) {
+        if (ghResponse.hasErrors()) {
             throw new RuntimeException();
         } else {
-//            logger.info(logStr + ", alternatives: " + ghResponse.getAll().size()
-//                    + ", distance0: " + ghResponse.getBest().getDistance()
-//                    + ", time0: " + Math.round(ghResponse.getBest().getTime() / 60000f) + "min"
-//                    + ", points0: " + ghResponse.getBest().getPoints().getSize()
-//                    + ", debugInfo: " + ghResponse.getDebugInfo());
-            return Response.ok(WebHelper.jsonObject(ghMatrixResponse, instructions, calcPoints, enableElevation, pointsEncoded, took)).
+            logger.info(logStr + ", Matrix is calculated");
+            return Response.ok(WebHelper.jsonObject(lowLevelMatrixResponse, instructions, calcPoints, enableElevation, pointsEncoded, took)).
                     header("X-GH-Took", "" + Math.round(took * 1000)).
                     build();
         }

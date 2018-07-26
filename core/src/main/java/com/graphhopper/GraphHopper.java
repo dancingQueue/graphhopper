@@ -965,6 +965,108 @@ public class GraphHopper implements GraphHopperAPI {
         return matrixResponse;
     }
 
+    public void calcPathsForMatrix(GHRequest request, List<GHPoint> sourcePoints, List<GHPoint> destinationPoints, LowLevelMatrixResponse matrixResponse, GHResponse ghRsp) {
+        if (ghStorage == null || !fullyLoaded)
+            throw new IllegalStateException("Do a successful call to load or importOrLoad before routing");
+
+        if (ghStorage.isClosed())
+            throw new IllegalStateException("You need to create a new GraphHopper instance as it is already closed");
+
+        // default handling
+        String vehicle = request.getVehicle();
+        if (vehicle.isEmpty()) {
+            vehicle = getDefaultVehicle().toString();
+            request.setVehicle(vehicle);
+        }
+
+        Lock readLock = readWriteLock.readLock();
+        readLock.lock();
+        try {
+            if (!encodingManager.supports(vehicle))
+                throw new IllegalArgumentException("Vehicle not supported: " + vehicle + ". Supported are: " + encodingManager.toString());
+
+            HintsMap hints = request.getHints();
+            String tModeStr = hints.get("traversal_mode", traversalMode.toString());
+            TraversalMode tMode = TraversalMode.fromString(tModeStr);
+            if (hints.has(Routing.EDGE_BASED))
+                tMode = hints.getBool(Routing.EDGE_BASED, false) ? TraversalMode.EDGE_BASED_2DIR : TraversalMode.NODE_BASED;
+
+            FlagEncoder encoder = encodingManager.getEncoder(vehicle);
+
+            boolean disableCH = hints.getBool(CH.DISABLE, false);
+            if (!chFactoryDecorator.isDisablingAllowed() && disableCH)
+                throw new IllegalArgumentException("Disabling CH not allowed on the server-side");
+
+            boolean disableLM = hints.getBool(Landmark.DISABLE, false);
+            if (!lmFactoryDecorator.isDisablingAllowed() && disableLM)
+                throw new IllegalArgumentException("Disabling LM not allowed on the server-side");
+
+            String algoStr = request.getAlgorithm();
+            if (algoStr.isEmpty())
+                algoStr = chFactoryDecorator.isEnabled() && !disableCH ? DIJKSTRA_BI : ASTAR_BI;
+
+            List<GHPoint> points = request.getPoints();
+            // TODO Maybe we should think about a isRequestValid method that checks all that stuff that we could do to fail fast
+            // For example see #734
+            checkIfPointsAreInBounds(points);
+
+            RoutingTemplate routingTemplate;
+            if (ROUND_TRIP.equalsIgnoreCase(algoStr))
+                routingTemplate = new RoundTripRoutingTemplate(request, ghRsp, locationIndex, maxRoundTripRetries);
+            else if (ALT_ROUTE.equalsIgnoreCase(algoStr))
+                routingTemplate = new AlternativeRoutingTemplate(request, ghRsp, locationIndex);
+            else
+                routingTemplate = new ViaRoutingTemplate(request, ghRsp, locationIndex);
+
+            List<Path> altPaths = null;
+            int maxRetries = routingTemplate.getMaxRetries();
+
+            for (GHPoint sourcePoint : sourcePoints) {
+                for (GHPoint destinationPoint: destinationPoints) {
+                    for (int i = 0; i < maxRetries; i++) {
+                        points = new ArrayList<>();
+                        points.add(sourcePoint);
+                        points.add(destinationPoint);
+
+                        List<QueryResult> qResults = routingTemplate.lookup(points, encoder);
+
+                        RoutingAlgorithmFactory tmpAlgoFactory = getAlgorithmFactory(hints);
+                        Weighting weighting;
+                        QueryGraph queryGraph;
+                        checkNonChMaxWaypointDistance(points);
+                        queryGraph = new QueryGraph(ghStorage);
+                        queryGraph.lookup(qResults);
+                        weighting = createWeighting(hints, encoder, queryGraph);
+
+                        int maxVisitedNodesForRequest = hints.getInt(Routing.MAX_VISITED_NODES, maxVisitedNodes);
+                        if (maxVisitedNodesForRequest > maxVisitedNodes)
+                            throw new IllegalArgumentException("The max_visited_nodes parameter has to be below or equal to:" + maxVisitedNodes);
+
+                        weighting = createTurnWeighting(queryGraph, weighting, tMode);
+
+                        AlgorithmOptions algoOpts = AlgorithmOptions.start().
+                                algorithm(algoStr).traversalMode(tMode).weighting(weighting).
+                                maxVisitedNodes(maxVisitedNodesForRequest).
+                                hints(hints).
+                                build();
+
+                        // do the actual route calculation !
+                        altPaths = routingTemplate.calcPaths(queryGraph, tmpAlgoFactory, algoOpts);
+                        matrixResponse.addDistance(altPaths.get(0).getDistance());
+                        matrixResponse.addDuration(altPaths.get(0).getTime());
+
+                    }
+                }
+            }
+
+
+        } catch (IllegalArgumentException ex) {
+
+        } finally {
+            readLock.unlock();
+        }
+    }
+
     /**
      * This method calculates the alternative path list using the low level Path objects.
      */

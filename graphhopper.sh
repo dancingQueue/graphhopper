@@ -38,7 +38,6 @@ function printBashUsage {
 }
 
 VERSION=$(grep "<name>" -A 1 pom.xml | grep version | cut -d'>' -f2 | cut -d'<' -f1)
-
 # one or two character parameters have one minus character'-' all longer parameters have two minus characters '--'
 while [ ! -z $1 ]; do
   case $1 in
@@ -234,7 +233,7 @@ else
    LINK="http://download.geofabrik.de/$LINK-latest.osm.pbf"
 fi
 
-: "${JAVA_OPTS:=-Xmx1000m -Xms1000m}"
+: "${JAVA_OPTS:=-Xmx5000m -Xms5000m -Xdebug -Xrunjdwp:transport=dt_socket,address=8998,suspend=n,server=y}"
 : "${JAR:=web/target/graphhopper-web-$VERSION.jar}"
 : "${GRAPH:=$DATADIR/$NAME-gh}"
 

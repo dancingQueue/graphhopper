@@ -22,6 +22,7 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.graphhopper.GHMatrixResponse;
 import com.graphhopper.GHResponse;
+import com.graphhopper.LowLevelMatrixResponse;
 import com.graphhopper.PathWrapper;
 import com.graphhopper.util.Helper;
 import com.graphhopper.util.PointList;
@@ -29,6 +30,7 @@ import com.graphhopper.util.PointList;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.text.NumberFormat;
+import java.util.List;
 import java.util.Locale;
 
 /**
@@ -136,6 +138,29 @@ public class WebHelper {
         }
         num += 63;
         sb.append((char) (num));
+    }
+
+    public static ObjectNode jsonObject(LowLevelMatrixResponse ghMatrixResponse, boolean enableInstructions, boolean calcPoints, boolean enableElevation, boolean pointsEncoded, float took) {
+        ObjectNode json = JsonNodeFactory.instance.objectNode();
+        // If you replace GraphHopper with your own brand name, this is fine.
+        // Still it would be highly appreciated if you mention us in your about page!
+        final ObjectNode info = json.putObject("info");
+        info.putArray("copyrights")
+                .add("GraphHopper")
+                .add("OpenStreetMap contributors");
+        info.put("took", Math.round(took * 1000));
+
+        ArrayNode jsonPathList = json.putArray("results");
+        List<Double> distances = ghMatrixResponse.getDistances();
+        List<Long> durations = ghMatrixResponse.getDurations();
+        for (int i = 0; i < distances.size(); i++) {
+            long duration = durations.get(i);
+            double distance = distances.get(i);
+            ObjectNode jsonPath = jsonPathList.addObject();
+            jsonPath.put("distance", Helper.round(distance, 3));
+            jsonPath.put("time", duration);
+        }
+        return json;
     }
 
     public static ObjectNode jsonObject(GHMatrixResponse ghMatrixResponse, boolean enableInstructions, boolean calcPoints, boolean enableElevation, boolean pointsEncoded, float took) {

@@ -17,6 +17,8 @@
  */
 package com.graphhopper;
 
+import com.graphhopper.util.shapes.GHPoint;
+
 import java.util.List;
 
 /**
@@ -44,4 +46,6 @@ public interface GraphHopperAPI {
     GHResponse route(GHRequest request);
 
     GHMatrixResponse route(List<GHRequest> requests);
+
+    void calcPathsForMatrix(GHRequest request, List<GHPoint> sourcePoints, List<GHPoint> destinationPoints, LowLevelMatrixResponse matrixResponse, GHResponse ghRsp);
 }

@@ -385,6 +385,11 @@ public class GraphHopperWeb implements GraphHopperAPI {
         return matrixResponse;
     }
 
+    @Override
+    public void calcPathsForMatrix(GHRequest request, List<GHPoint> sourcePoints, List<GHPoint> destinationPoints, LowLevelMatrixResponse matrixResponse, GHResponse ghRsp) {
+
+    }
+
     private OkHttpClient getClientForRequest(GHRequest request) {
         OkHttpClient client = this.downloader;
         if (request.getHints().has(TIMEOUT)) {
