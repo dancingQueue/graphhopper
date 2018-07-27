@@ -53,7 +53,6 @@ import java.util.*;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.stream.Collectors;
 
 import static com.graphhopper.util.Helper.*;
 import static com.graphhopper.util.Parameters.Algorithms.*;
@@ -1043,7 +1042,7 @@ public class GraphHopper implements GraphHopperAPI {
                 for (int j = 0; j < destinationPoints.size(); j++) {
                     for (int z = 0; z < maxRetries; z++) {
                         // do the actual route calculation !
-                        altPaths = routingTemplate.calcPaths(i, j, queryGraph, tmpAlgoFactory, algoOpts);
+                        altPaths = routingTemplate.calcPaths(i, sourcePointsSize + j, queryGraph, tmpAlgoFactory, algoOpts);
                         matrixResponse.setRoute(i * sourcePointsSize + j, altPaths.get(0).getDistance(), altPaths.get(0).getTime());
 
                     }
