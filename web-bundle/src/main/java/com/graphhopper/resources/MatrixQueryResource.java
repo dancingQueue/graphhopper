@@ -141,7 +141,7 @@ public class MatrixQueryResource {
                 put(WAY_POINT_MAX_DISTANCE, minPathPrecision);
 
 
-        LowLevelMatrixResponse lowLevelMatrixResponse = new LowLevelMatrixResponse();
+        LowLevelMatrixResponse lowLevelMatrixResponse = new LowLevelMatrixResponse(sourceRequestPoints.size() * destinationRequestPoints.size());
         GHResponse ghResponse = new GHResponse();
         graphHopper.calcPathsForMatrix(request, sourceRequestPoints, destinationRequestPoints, lowLevelMatrixResponse, ghResponse);
 

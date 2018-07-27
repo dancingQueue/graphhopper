@@ -151,11 +151,11 @@ public class WebHelper {
         info.put("took", Math.round(took * 1000));
 
         ArrayNode jsonPathList = json.putArray("results");
-        List<Double> distances = ghMatrixResponse.getDistances();
-        List<Long> durations = ghMatrixResponse.getDurations();
-        for (int i = 0; i < distances.size(); i++) {
-            long duration = durations.get(i);
-            double distance = distances.get(i);
+        double[] distances = ghMatrixResponse.getDistances();
+        long[] durations = ghMatrixResponse.getDurations();
+        for (int i = 0; i < distances.length; i++) {
+            long duration = durations[i];
+            double distance = distances[i];
             ObjectNode jsonPath = jsonPathList.addObject();
             jsonPath.put("distance", Helper.round(distance, 3));
             jsonPath.put("time", duration);

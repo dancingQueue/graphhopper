@@ -25,10 +25,7 @@ import com.graphhopper.routing.ch.CHAlgoFactoryDecorator;
 import com.graphhopper.routing.ch.PrepareContractionHierarchies;
 import com.graphhopper.routing.lm.LMAlgoFactoryDecorator;
 import com.graphhopper.routing.subnetwork.PrepareRoutingSubnetworks;
-import com.graphhopper.routing.template.AlternativeRoutingTemplate;
-import com.graphhopper.routing.template.RoundTripRoutingTemplate;
-import com.graphhopper.routing.template.RoutingTemplate;
-import com.graphhopper.routing.template.ViaRoutingTemplate;
+import com.graphhopper.routing.template.*;
 import com.graphhopper.routing.util.*;
 import com.graphhopper.routing.weighting.*;
 import com.graphhopper.storage.*;
@@ -56,6 +53,7 @@ import java.util.*;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.stream.Collectors;
 
 import static com.graphhopper.util.Helper.*;
 import static com.graphhopper.util.Parameters.Algorithms.*;
@@ -1010,50 +1008,43 @@ public class GraphHopper implements GraphHopperAPI {
             // For example see #734
             checkIfPointsAreInBounds(points);
 
-            RoutingTemplate routingTemplate;
-            if (ROUND_TRIP.equalsIgnoreCase(algoStr))
-                routingTemplate = new RoundTripRoutingTemplate(request, ghRsp, locationIndex, maxRoundTripRetries);
-            else if (ALT_ROUTE.equalsIgnoreCase(algoStr))
-                routingTemplate = new AlternativeRoutingTemplate(request, ghRsp, locationIndex);
-            else
-                routingTemplate = new ViaRoutingTemplate(request, ghRsp, locationIndex);
+            MatrixRoutingTemplate routingTemplate = new MatrixRoutingTemplate(request, ghRsp, locationIndex);
 
             List<Path> altPaths = null;
             int maxRetries = routingTemplate.getMaxRetries();
+            RoutingAlgorithmFactory tmpAlgoFactory = getAlgorithmFactory(hints);
+            int maxVisitedNodesForRequest = hints.getInt(Routing.MAX_VISITED_NODES, maxVisitedNodes);
+            if (maxVisitedNodesForRequest > maxVisitedNodes)
+                throw new IllegalArgumentException("The max_visited_nodes parameter has to be below or equal to:" + maxVisitedNodes);
 
-            for (GHPoint sourcePoint : sourcePoints) {
-                for (GHPoint destinationPoint: destinationPoints) {
-                    for (int i = 0; i < maxRetries; i++) {
-                        points = new ArrayList<>();
-                        points.add(sourcePoint);
-                        points.add(destinationPoint);
+            points = new ArrayList<>(sourcePoints);
+            points.addAll(destinationPoints);
 
-                        List<QueryResult> qResults = routingTemplate.lookup(points, encoder);
+            List<QueryResult> qResults = routingTemplate.lookup(points, encoder);
 
-                        RoutingAlgorithmFactory tmpAlgoFactory = getAlgorithmFactory(hints);
-                        Weighting weighting;
-                        QueryGraph queryGraph;
-                        checkNonChMaxWaypointDistance(points);
-                        queryGraph = new QueryGraph(ghStorage);
-                        queryGraph.lookup(qResults);
-                        weighting = createWeighting(hints, encoder, queryGraph);
+            Weighting weighting;
+            QueryGraph queryGraph;
+            checkNonChMaxWaypointDistance(points);
+            queryGraph = new QueryGraph(ghStorage);
+            queryGraph.lookup(qResults);
+            weighting = createWeighting(hints, encoder, queryGraph);
 
-                        int maxVisitedNodesForRequest = hints.getInt(Routing.MAX_VISITED_NODES, maxVisitedNodes);
-                        if (maxVisitedNodesForRequest > maxVisitedNodes)
-                            throw new IllegalArgumentException("The max_visited_nodes parameter has to be below or equal to:" + maxVisitedNodes);
+            weighting = createTurnWeighting(queryGraph, weighting, tMode);
 
-                        weighting = createTurnWeighting(queryGraph, weighting, tMode);
+            AlgorithmOptions algoOpts = AlgorithmOptions.start().
+                    algorithm(algoStr).traversalMode(tMode).weighting(weighting).
+                    maxVisitedNodes(maxVisitedNodesForRequest).
+                    hints(hints).
+                    build();
 
-                        AlgorithmOptions algoOpts = AlgorithmOptions.start().
-                                algorithm(algoStr).traversalMode(tMode).weighting(weighting).
-                                maxVisitedNodes(maxVisitedNodesForRequest).
-                                hints(hints).
-                                build();
 
+            int sourcePointsSize = sourcePoints.size();
+            for (int i = 0; i < sourcePointsSize; i++) {
+                for (int j = 0; j < destinationPoints.size(); j++) {
+                    for (int z = 0; z < maxRetries; z++) {
                         // do the actual route calculation !
-                        altPaths = routingTemplate.calcPaths(queryGraph, tmpAlgoFactory, algoOpts);
-                        matrixResponse.addDistance(altPaths.get(0).getDistance());
-                        matrixResponse.addDuration(altPaths.get(0).getTime());
+                        altPaths = routingTemplate.calcPaths(i, j, queryGraph, tmpAlgoFactory, algoOpts);
+                        matrixResponse.setRoute(i * sourcePointsSize + j, altPaths.get(0).getDistance(), altPaths.get(0).getTime());
 
                     }
                 }

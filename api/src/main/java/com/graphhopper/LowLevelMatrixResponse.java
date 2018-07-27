@@ -1,25 +1,25 @@
 package com.graphhopper;
 
-import java.util.ArrayList;
-import java.util.List;
 
 public class LowLevelMatrixResponse {
-    private List<Double> distances = new ArrayList<>();
-    private List<Long> durations = new ArrayList<>();
+    private double[] distances;
+    private long[] durations;
 
-    public void addDistance(double distance) {
-        distances.add(distance);
+    public LowLevelMatrixResponse(int size) {
+        distances = new double[size];
+        durations = new long[size];
     }
 
-    public void addDuration(long duration) {
-        durations.add(duration);
+    public void setRoute(int index, double distance, long duration) {
+        distances[index] = distance;
+        durations[index] = duration;
     }
 
-    public List<Double> getDistances() {
+    public double[] getDistances() {
         return distances;
     }
 
-    public List<Long> getDurations() {
+    public long[] getDurations() {
         return durations;
     }
 }
